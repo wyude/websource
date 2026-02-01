@@ -55,7 +55,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #'django_cas_ng.middleware.CASMiddleware',
 ]
-CSRF_TRUSTED_ORIGINS = ['http://202.206.247.59','http://wx.ysu.edu.cn','https://wx.ysu.edu.cn','http://wx.ysu.edu.cn:8089','https://wx.ysu.edu.cn:8089']
+#CSRF_TRUSTED_ORIGINS = ['*']
 ROOT_URLCONF = 'yit_source.urls'
 
 TEMPLATES = [
@@ -80,13 +80,13 @@ WSGI_APPLICATION = 'yit_source.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES_backup = {
+DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-DATABASES = {
+DATABASES_backup = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'websource',

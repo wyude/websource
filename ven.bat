@@ -1,1 +1,1 @@
-..\yit_source\Scripts\activate.bat
+.\Scripts\activate.bat

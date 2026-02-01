@@ -1,0 +1,218 @@
+
+py -m venv project-name
+project-name\Scripts\activate.bat
+py -m pip install Django
+py -m pip install colorama
+
+django-admin startproject projectname
+python manage.py startapp appname
+
+python manage.py makemigrations
+python manage.py check
+python manage.py migrate
+
+#显示可读查询结果
+def __str__(self):
+        return self.question_text
+#字段备注
+verbose_name="related place"  
+#创建管理员账号
+py manage.py createsuperuser
+#多对多(many-to-many)关系中添加添加额外的属性字段
+#在实例化 ​​ManyToManyField​​的时候使用 ​​through​​参数指定多对多关系使用哪个中间模型
+#你需要在设置中间模型的时候，显式地为多对多关系中涉及的中间模型指定外键。这种显式声明定义了这两个模型之间是如何关联的。
+#你的中间模型要么有且仅有一个指向源模型（我们例子当中的 ​​Group​​）的外键，要么你必须通过 ​​ManyToManyField.through_fields​​ 参数在多个外键当中手动选择一个外键，如果有多个外健且没有用 ​​through_fields​参数选择一个的话，会出现验证错误。
+class Person(models.Model):
+    name = models.CharField(max_length=128)
+
+    def __str__(self):
+        return self.name
+
+class Group(models.Model):
+    name = models.CharField(max_length=128)
+    members = models.ManyToManyField(Person, through='Membership')
+
+    def __str__(self):
+        return self.name
+
+class Membership(models.Model):
+    person = models.ForeignKey(Person, on_delete=models.CASCADE)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
+    date_joined = models.DateField()
+    invite_reason = models.CharField(max_length=64)
+#Meta
+模型的元数据即“所有不是字段的东西”，比如排序选项（ ​​ordering​​），数据库表名（ ​​db_table​​）
+class Ox(models.Model):
+    horn_length = models.IntegerField()
+
+    class Meta:
+        ordering = ["horn_length"]
+        verbose_name_plural = "oxen"
+#更新 ​ManyToManyField字段有点不同——在字段上使用 ​add()​ 方法为关联关系添加一条记录。
+#F()​ 的实例充当查询中的模型字段的引用。这些引用可在查询过滤器中用于在同一模型实例中比较两个不同的字段。
+from django.db.models import F
+Entry.objects.filter(number_of_comments__gt=F('number_of_pingbacks'))
+#Q ​对象​（django.db.models.Q）​是一个用于封装关键字参数集合的对象，例如，由 ​OR​ 语句连接的查询    
+from django.db.models import Q
+Q(question__startswith='Who') | Q(question__startswith='What')
+#Q​ 对象也可通过 ​~​ 操作符反转
+Q(question__startswith='Who') | ~Q(pub_date__year=2005)
+#方法 ​update()​ 立刻被运行，并返回匹配查询调节的行数
+调用更新方法时也能使用 ​F​ 表达式 基于同一模型另一个字段的值更新某个字段。这在基于计数器的当前值增加其值时特别有用。例如，要增加博客中每个条目 ​pingback ​的计数:
+Entry.objects.all().update(number_of_pingbacks=F('number_of_pingbacks') + 1)
+#管理关联对象的额外方法
+​ForeignKey Manager ​还有方法能处理关联对象集合。除了上面的 “检索对象” 中定义的 ​QuerySet ​方法以外，以下是每项的简要介绍：
+​add(obj1, obj2, ...)​：将特定的模型对象加入关联对象集合。
+​create(**kwargs)​：创建一个新对象，保存，并将其放入关联对象集合中。返回新创建的对象。
+​remove(obj1, obj2, ...)​：从关联对象集合删除指定模型对象。
+​clear()​：从关联对象集合删除所有对象。
+​set(objs)​：替换关联对象集合
+#回归原生SQL
+Person.objects.raw('SELECT * FROM myapp_person')
+Person.objects.raw('SELECT * FROM myapp_person WHERE last_name = %s', [lname])
+#聚合
+##在QuerySet上生成聚合
+##aggregate()是终端子句
+from django.db.models import Avg， Max， FloatField， Count
+Book.objects.all().aggregate(Max('price'))
+Book.objects.aggregate(Avg('price'), Max('price'), Min('price'))
+##在QuerySet中的每一个条目生成聚合
+##使用 ​annotate()​ 子句可以生成每一个对象的汇总
+##annotate()​ 不是终端子句。​annotate()​ 子句的输出就是 ​QuerySet​；这个 ​QuerySet ​被其他 ​QuerySet ​操作进行修改，包括 ​filter()​, ​order_by()​ ，甚至可以对 ​annotate()​ 进行额外调用。
+q = Book.objects.annotate(num_authors=Count('authors'))
+q[0].num_authors
+q = Book.objects.annotate(Count('authors', distinct=True), Count('store', distinct=True))
+#事务
+from django.db import transaction
+@transaction.atomic
+def viewfunc(request):
+    # This code executes inside a transaction.
+    do_stuff()
+#或
+from django.db import transaction
+def viewfunc(request):
+    # This code executes in autocommit mode (Django's default).
+    do_stuff()
+    with transaction.atomic():
+        # This code executes inside a transaction.
+        do_more_stuff()
+#要避免在 atomic 内部捕捉异常！
+#当事务回滚时，模型字段的值不会被恢复。除非你手工恢复初始的字段值，否则这会导致模型状态不一致。
+from django.db import DatabaseError, transaction
+obj = MyModel(active=False)
+obj.active = True
+try:
+    with transaction.atomic():
+        obj.save()
+except DatabaseError:
+    obj.active = False
+##提交后
+##Django 提供了 on_commit() 函数来注册在事务成功提交后应该执行的回调函数：
+transaction.on_commit(do_something)
+##保存点
+##正确处理保存点（即嵌套了 ​atomic()​ 块）。也就是说，注册在保存点后的 ​on_commit()​  的调用（嵌套在 ​atomic()​ 块）将在外部事务被提交之后调用，但如果在事务期间回滚到保存点或任何之前的保存点之前，则不会调用：
+with transaction.atomic():  # Outer atomic, start a new transaction
+    transaction.on_commit(foo)
+    with transaction.atomic():  # Inner atomic block, create a savepoint
+        transaction.on_commit(bar)
+# foo() and then bar() will be called when leaving the outermost block
+
+
+#在管理页面添​ 注册 ​Question ​模型
+admin.py
+from .models import Question
+admin.site.register(Question)
+
+from django.shortcuts import render
+@login_required
+from django.contrib.auth.decorators import login_required, permission_required
+from django.http import Http404, HttpResponse, get_object_or_404,  HttpResponseRedirect
+from django.urls import reverse
+try:
+        question = Question.objects.get(pk=question_id)
+except Question.DoesNotExist:
+        raise Http404("Question does not exist")
+return HttpResponseRedirect(reverse('polls:results', args=(question.id,)))
+return HttpResponseRedirect('/success/url/')
+如果在 ​request.POST['choice']​ 数据中没有提供 ​choice ​， POST 将引发一个 ​KeyError ​
+try:
+        selected_choice = question.choice_set.get(pk=request.POST['choice'])
+    except (KeyError, Choice.DoesNotExist):
+
+#from django.contrib import auth    
+user = request.POST.get('user')
+        pwd = request.POST.get('pwd')
+
+        # 通过内置验证
+        user = auth.authenticate(username=user, password=pwd)
+
+        if user:
+            # 将登陆的信息封装到request.user,包括session
+            auth.login(request, user)
+            return redirect('/index/')
+
+question = get_object_or_404(Question, pk=question_id)
+question = get_list_or_404(Question, pk=question_id)
+
+{% url 'detail' question.id %}
+{% url 'polls:detail' question.id %}
+
+{% csrf_token %}
+
+{% load static %}
+{% static %}
+{% static 'polls/style.css' %}
+
+
+#视图装饰器
+##允许的HTTP方法 require_http_methods(request_method_list)
+from django.views.decorators.http import require_http_methods
+@require_http_methods(["GET", "POST"])
+def my_view(request):
+    pass
+
+
+from django.core.paginator import Paginator
+def listing(request):
+    contact_list = Contact.objects.all()
+    paginator = Paginator(contact_list, 25)  # Show 25 contacts per page.
+
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    return render(request, "list.html", {"page_obj": page_obj})
+
+#序列化数据
+from django.core import serializers
+data = serializers.serialize("json", SomeModel.objects.all())
+##序列化程序指定 fields 参数：
+data = serializers.serialize("json", SomeModel.objects.all(), fields=["name", "size"])
+
+#在 Python 代码中使用 settings
+##引入 django.conf.settings 使用配置
+from django.conf import settings
+if settings.DEBUG:
+    # Do something
+
+# AJAX 请求中设置令
+const request = new Request(
+    /* URL */,
+    {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrftoken},
+        mode: 'same-origin' // Do not send CSRF token to another domain.
+    }
+);
+fetch(request).then(function(response) {
+    // ...
+});
+
+
+#配置和使用日志
+import logging
+logger = logging.getLogger(__name__)
+def some_view(request):
+    if some_risky_state:
+        logger.warning("Platform is running at risk")#DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+#输出大文件
+from django.http import StreamingHttpResponse

@@ -1,0 +1,303 @@
+{% load static %}
+
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>网络资产系统</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="{% static 'web_source/css/main.css' %}" />
+		<link rel="icon" sizes="any" mask href="{% static 'web_source/images/favicon.ico' %}">
+		<style>
+			#wrapper{
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 100vh;
+			}
+			.cc{
+				background-color: rgba(255, 0, 0, 0.5);
+			}
+			.info span{
+				display: block;
+				font-size:xx-small;
+			}
+		</style>
+	</head>
+
+	<body class="is-preload" style="background: url('{% static 'web_source/images/5.png' %}') no-repeat center center;background-size:contain">
+		<!-- Wrapper -->
+			<div id="wrapper" >
+				<div class="info" style="position:absolute;min-width:100px;height:auto;min-height:100px;color: rgb(26, 26, 23);top:10px;right: 10px;text-align: left;z-index: 99;"></div>
+				<img src="{% static 'web_source/images/5.png' %}" style="height: 100%;" alt="Planets" usemap="#planetmap" id="hotmap">
+				<i class="fa fa-cloud" class="on-off" id="icon-net" style="position:absolute;width:32px;height:32px;left:10px;top:10px;color: red;" title="网络覆盖" onclick="hilight()"></i>
+				<i class="fa fa-wifi" class="on-off" id="icon-wifi" style="position:absolute;width:32px;height:32px;left:42px;top:10px;color: red;" title="无线覆盖" onclick="showIcon(t='wifi')"></i>
+				<i class="fa fa-id-card" class="on-off" id="icon-eduroam" style="position:absolute;width:32px;height:32px;left:74px;top:10px;color: red;" title="EDUROAM" onclick="showIcon(t='eduroam')"></i>
+				<i class="fa fa-random" class="on-off" id="icon-dhcp" style="position:absolute;width:32px;height:32px;left:106px;top:10px;color: red;" title="DHCP" onclick="showIcon(t='dhcp')"></i>
+				<i class="fa fa-bolt" class="on-off" id="icon-elec" style="position:absolute;width:32px;height:32px;left:138px;top:10px;color: red;" title="独立供电" onclick="showIcon(t='elec')"></i>
+				<i class="fa fa-calendar" class="on-off" id="icon-wire_date" style="position:absolute;width:32px;height:32px;left:10px;top:42px;color: red;" title="综合布线时间" onclick="showIcon(t='wire_date')">z</i>
+				<i class="fa fa-calendar" class="on-off" id="icon-wifi_date" style="position:absolute;width:32px;height:32px;left:42px;top:42px;color: red;" title="无线改造时间" onclick="showIcon(t='wifi_date')">w</i>
+				<i class="fa fa-exclamation-triangle" class="on-off" id="icon-wire_gt_10" style="position:absolute;width:32px;height:32px;left:74px;top:42px;color: red;" title="综合布线超6年" onclick="showIcon(t='wire_gt_10')">z</i>
+				<i class="fa fa-exclamation-triangle" class="on-off" id="icon-wifi_gt_10" style="position:absolute;width:32px;height:32px;left:106px;top:42px;color: red;" title="无线改造超6年" onclick="showIcon(t='wifi_gt_10')">w</i>
+				<i class="fa fa-star" class="on-off" id="icon-zhongdian" style="position:absolute;width:32px;height:32px;left:10px;top:74px;color: red;" title="重点节点" onclick="showZhongDian()"></i>
+
+				<i id="left_info" style="position:absolute;width:100px;height:32px;left:10px;top:200px;color: blue;" ></i>
+				{% for it in data %}
+					<!-- img class="hover-icon" id="icon-{{it.idcode}}" style="position:absolute;pointer-events:none;width:32px;height:32px;" src="" -->
+					<i class="hover-icon fa " id="icon-{{it.idcode}}" style="pointer-events:none;position:absolute;width:10px;height:10px;color: blue;font-size:xx-small;"></i>
+				{% empty %}
+				{% endfor %}
+				<map name="planetmap">
+					<!-- area class="cc" shape="rect" coords="0,0,50,50" alt="开关" href="javascript:hilight()" -->
+				{% for it in data %}
+					<area class="cc" id="{{it.idcode}}" shape="poly" coords="" title="{{it.name}}" alt="Venus" onclick="showInfo('{{it.idcode}}')" >
+				{% empty %}
+				{% endfor %}
+				</map>
+			</div>
+
+		<!-- Scripts -->
+			<script src="{% static 'web_source/js/jquery.min.js' %}"></script>
+			<!-- Javascript -->
+			<script src="{% static 'web_source/js/browser.min.js' %}"></script>
+			<script src="{% static 'web_source/js/breakpoints.min.js' %}"></script>
+			<script src="{% static 'web_source/js/util.js' %}"></script>
+			<script src="{% static 'web_source/js/main.js' %}"></script>
+			<script src="{% static 'web_source/js/jquery.maphilight.min.js' %}"></script>
+			<script>
+				let data = {{data2|safe}};
+				let rwidth = 4729;
+				let rheight = 3157;
+				let net = false;
+				let showIc = false;
+				let icon_class = 'fa-wifi fa-random fa-id-card fa-bolt fa-exclamation-triangle fa-star';
+				let roomType = {'A':'弱电间','B':'机柜'}
+				function hilight(){
+					//alert();
+					if(net){
+						$('#hotmap').maphilight({
+							fill:false,
+							fillColor:'ff0000',
+							fillOpacity:0.6,
+							alwaysOn:false
+						});
+					}else{
+						$('#hotmap').maphilight({
+						fill:true,
+						fillColor:'ff0000',
+						fillOpacity:0.6,
+						alwaysOn:true
+						});
+					}
+					net = !net;
+				}
+				function getdata(){
+					let img = $('#hotmap')
+					let vwidth = img.width();
+					let vheight = img.height();
+					//console.log("Width:", vwidth, "Height:", vheight);
+					for(let it of data){
+						//let point1 = it.point1 * vwidth/rwidth;console.log(point1);
+						//let point2 = it.point2 * vheight/rheight;
+						//let point3 = it.point3 * vwidth/rwidth;
+						//let point4 = it.point4 * vheight/rheight;
+						//console.log(it.points);
+						if(!it.points){continue;}
+						let points = it.points.split(',');
+						//console.log(points)
+						let points_str = "";
+						let point1 = 0
+						for(let [i,value] of points.entries()){
+							//console.log(i,value)
+							if(i%2==0){
+								point1 = value * vwidth/rwidth;
+							}else{
+								point1 = value * vheight/rheight;
+							}
+							points_str = points_str + parseInt(point1) + ',';
+						}
+						points_str = points_str.slice(0,-1)
+						//let points = parseInt(point1)+','+parseInt(point2)+','+parseInt(point3)+','+parseInt(point4);
+						//console.log(points_str);
+						$('#'+it.idcode).attr('coords',points_str);
+						//$('.cc').attr('coords',points);
+					}
+				}
+				function showIcon(t=''){
+					/*
+					showIc = !showIc;
+					if(!showIc){
+						//$('.hover-icon').removeClass('fa-wifi').removeClass('fa-random').removeClass('fa-id-card').removeClass('fa-bolt').removeClass('fa-exclamation-triangle');
+						$('.hover-icon').removeClass(icon_class)
+						$('.hover-icon').empty();
+					}*/
+					if(1==2){}
+					else{
+						let img = $('#hotmap')
+						let vwidth = img.width();
+						let vheight = img.height();
+						let imgLeft = img.offset().left;
+						$('.hover-icon').removeClass(icon_class)
+						$('.hover-icon').empty();
+						for(let it of data){
+							if(it.center_point == 'undefined' || it.center_point == undefined ){continue;}
+							//console.log(it.center_point);
+							let points = it.center_point.split(',');
+							point1 = parseInt(points[0] * vwidth/rwidth + imgLeft) -10;
+							point2 = parseInt(points[1] * vheight/rheight) - 10;
+							//$('#icon-'+it.idcode).css('left',point1+'px')
+							//$('#icon-'+it.idcode).css('top',point2+'px')
+							let a = $('#icon-'+it.idcode);
+							a.css({left:point1+'px',top:point2+'px'})
+							a.attr('title',it.name);
+							if(t == 'wifi' && it.wifi){
+								a.addClass('fa-wifi');
+							}else if((t == 'eduroam' && it.eduroam)){
+								a.addClass('fa-id-card');
+							}else if((t == 'dhcp' && it.dhcp)){
+								a.addClass('fa-random');
+							}else if(t == 'elec' && it.elec){
+								a.addClass('fa-bolt');
+							}else if(t == 'wifi_date' && it.year2){
+								a.text(it.year2);
+							}else if(t == 'wire_date' && it.year1){
+								a.text(it.year1);
+							}else if(t == 'wire_gt_10' && it.gt_10_1 && it.gt_10_1>6){
+								a.addClass('fa-exclamation-triangle');
+								a.text(it.gt_10_1);
+							}else if(t == 'wifi_gt_10' && it.gt_10_2 && it.gt_10_2>6){
+								a.addClass('fa-exclamation-triangle');
+								a.text(it.gt_10_2);
+							}else if(t == 'xxx' && it.xxx){
+								a.addClass('fa-exclamation-triangle');
+								a.text(it.xxx);
+							}
+						}
+					}
+				}
+				function showInfo(idcode){
+					let info_pos = $('.info');
+					info_pos.empty();
+					let item = $('<span>正在查询......</span>');
+					info_pos.append(item);
+					$.ajax({
+					url: "{% url 'web_source:map' %}",    
+					type: "POST",
+					headers: {
+						"X-CSRFToken": "{{ csrf_token }}"
+					},
+					data: { id: idcode }, 
+					dataType: "json",    // 预期返回数据类型（如JSON）
+					success: function(data) {
+						//console.log("查询成功:", data.data);
+						info_pos.empty();
+						let info = data.data;
+						let item = $('<span>楼宇：'+info.name+'</span>')
+						info_pos.append(item);
+						item = $('<span>校区：'+info.campus__name+'</span>')
+						info_pos.append(item);
+						item = $('<span>无线：'+info.wifi+'</span>')
+						info_pos.append(item);
+						item = $('<span>DHCP：'+info.dhcp+'</span>')
+						info_pos.append(item);
+						item = $('<span>EDUROAM：'+info.eduroam+'</span>')
+						info_pos.append(item);
+						item = $('<span>独立供电：'+info.elec+'</span>')
+						info_pos.append(item);
+						item = $('<span>无线：'+info.wifi+'</span>')
+						info_pos.append(item);
+						for(let ip of info.ipinfo){
+							console.log(ip);
+							item = $('<span>网络名：'+ip.network+'</span>')
+							info_pos.append(item);
+							item = $('<span style="text-indent:2rem;">掩码：'+ip.netmask_int+'</span>')
+							info_pos.append(item);
+							item = $('<span style="text-indent:2rem;">掩码：'+ip.netmask+'</span>')
+							info_pos.append(item);
+							item = $('<span style="padding-left:2rem;max-width:180px;white-space: pre-wrap">备注：'+ip.remarks+'</span>')
+							info_pos.append(item);							
+						}
+						item = $('<span>综合布线时间：'+info.date_update+'</span>')
+						info_pos.append(item);
+						item = $('<span>无线改造时间：'+info.date2_update+'</span>')
+						info_pos.append(item);
+						item = $('<span>无线点位：'+info.num_wireless+'</span>')
+						info_pos.append(item);
+						item = $('<span>有线点位：'+info.num_wired+'</span>')
+						info_pos.append(item);
+						item = $('<span>弱电间数：'+info.rinfo_num+'</span>')
+						info_pos.append(item);
+						item = $('<span>设备数量：'+info.dinfo_num+'</span>')
+						info_pos.append(item);
+						for(let ii of info.rinfo){
+							//console.log(ii);
+							item = $('<span>设备间：'+ii.name+'</span>')
+							info_pos.append(item);
+							item = $('<span style="text-indent:2rem;">类别：'+roomType[ii.room_type]+'</span>')
+							info_pos.append(item);
+							item = $('<span style="text-indent:2rem;">楼层：'+ii.floor+'</span>')
+							info_pos.append(item);
+							if(ii.dinfo){
+								for(let jj of ii.dinfo){
+								item = $('<span style="text-indent:2rem;">设备：'+jj.name+'('+jj.version+')'+'</span>')
+								info_pos.append(item);
+								}
+							}
+							
+						}
+					},
+					error: function(xhr, status, error) {
+						console.error("请求失败:", error);
+						alert(error);
+					}
+					});
+				}
+				function showZhongDian(){
+					let info_pos = $('#left_info');
+					info_pos.empty();
+					let item = '正在查询......';
+					info_pos.text(item);
+					$.ajax({
+						url: "{% url 'web_source:map' %}",    
+						type: "POST",
+						headers: {
+							"X-CSRFToken": "{{ csrf_token }}"
+						},
+						data: { zhongdian: 'zhongdian' }, 
+						dataType: "json",    // 预期返回数据类型（如JSON）
+							success: function(data) {
+								info_pos.empty();
+								//console.log("查询成功:", data.data);
+								showIc = true;
+								if(showIc){
+									$('.hover-icon').removeClass(icon_class)
+									$('.hover-icon').empty();
+								}
+								let img = $('#hotmap')
+								let vwidth = img.width();
+								let vheight = img.height();
+								let imgLeft = img.offset().left;
+								for(let it of data.data){
+									if(it.building__center_point == 'undefined' || it.building__center_point == undefined ){continue;}
+									//console.log(it.building__center_point);
+									let points = it.building__center_point.split(',');
+									point1 = parseInt(points[0] * vwidth/rwidth + imgLeft) -10;
+									point2 = parseInt(points[1] * vheight/rheight) - 10;
+									let a = $('#icon-'+it.building__idcode);
+									a.css({left:point1+'px',top:point2+'px'})
+									a.addClass('fa-star');
+								}	
+							},
+					error: function(xhr, status, error) {
+						console.error("请求失败:", error);
+						alert(error);
+					}
+					});
+				}
+				$(function(){
+					let dfd = $.Deferred(getdata());
+					//let aa = dfd.then(hilight());
+				})
+			</script>
+	</body>
+</html>

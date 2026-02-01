@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+{% block mainbody %}
+
+<!-- Header -->
+<header id="header2" style="height: 100px;">
+
+</header>
+
+<!-- Content -->
+<section>
+
+<!-- Elements -->
+<div class="container-fluid h-100" style="position:relative">
+<div class="row h-100">
+	<div class="col-md-2 p-3 bg-light tc">
+		<h5>图层控制</h5>
+		<div class="form-check form-switch">
+			<input class="form-check-input" type="checkbox" role="switch" id="toggleWells" checked>
+			<label class="form-check-label" for="toggleWells">弱电井</label>
+		</div>
+		<div class="form-check form-switch">
+			<input class="form-check-input" type="checkbox" role="switch" id="togglePaths" checked>
+			<label class="form-check-label" for="togglePaths">光缆路径</label>
+		</div>
+		<hr>
+		<div id="pathInfoPanel" class="d-none">
+			 <h5>选中路径信息</h5>
+			 <p id="selectedPathDescription"></p>
+		</div>
+	</div>
+	<div class="col-md-12 h-100 p-0">
+		<div id="map-container" class="w-100 h-100"></div>
+	</div>
+</div>
+</div>
+</section>	
+<section>
+	<div class="modal fade" id="coreModal" tabindex="-1" aria-labelledby="coreModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="coreModalLabel">纤芯状态可视化</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>路径描述: <span id="modalPathDescription"></span></h6>
+                    <p>总芯数: <span id="modalCoreCount"></span></p>
+                    <hr>
+                    <h6>纤芯状态 (点击修改):</h6>
+                    <div id="core-grid" class="core-grid-container">
+                        </div>
+                    <div class="mt-3">
+                        <strong>图例:</strong>
+                        <span class="badge core-status-normal">正常</span>
+                        <span class="badge core-status-unavailable">不可用</span>
+                        <span class="badge core-status-high-loss">光衰高</span>
+                        <span class="badge core-status-in-use">在用</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block mainscript %}
+<script type="text/javascript">
+	window._AMapSecurityConfig = {
+		securityJsCode: 'ca3562957edaae2b06ee5a265e2c865b', // 替换为你申请的安全密钥
+	}
+</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=ba726bed3cf909842a925d513bda506f&plugin=AMap.ControlBar,AMap.GeometryUtil"></script>
+<script src="{% static 'web_source/js/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'web_source/js/echarts.min.js' %}"></script>
+<script src="{% static 'web_source/js/echarts-extension-amap.min.js' %}"></script>
+<script src="{% static 'web_source/js/main_echarts.js' %}"></script>
+<script src="//webapi.amap.com/ui/1.1/main.js?v=1.1.1"></script>
+<link rel="stylesheet" href="{% static 'web_source/css/style.css' %}">
+
+<script type="text/javascript">
+	const WELL_API_URL = "{% url 'web_source:wells' %}"; // Example API endpoint
+    const PATH_API_URL = "{% url 'web_source:paths' %}"; // Example API endpoint
+    const UPDATE_STATUS_API_URL = "{% url 'web_source:update_status' %}"; // Example API endpoint
+</script>
+{% endblock %}
+
+

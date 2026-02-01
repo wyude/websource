@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% load static %}
+{% block mainbody %}
+<style>
+    #map-container {
+      width: 100%;
+      min-height: 80vh;
+      border: 1px solid #ddd;
+    }
+    .info-panel {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      z-index: 999;
+	  background: rgba(255,255,255,0.9);
+    }
+  </style>
+<!-- Header -->
+<header id="header2" style="height: 100px;">
+
+</header>
+
+<!-- Content -->
+<section>
+
+<!-- Elements -->
+<div class="row">
+	<div class="col-12">
+		<div id="map-container" ></div>
+		<div class="info-panel card shadow">
+			<div class="card-body">
+			<h5 class="card-title" id="pipeName">管线信息</h5>
+			<div id="pipeInfo"></div>
+			</div>
+		</div>
+		</div>
+</div>
+
+</section>	
+
+
+{% endblock %}
+
+{% block mainscript %}
+<script src="https://webapi.amap.com/maps?v=2.0&key=ba726bed3cf909842a925d513bda506f"></script>
+<!--script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.0/echarts.min.js"></script-->
+<script src="{% static 'web_source/js/echarts.min.js' %}"></script>
+<!--script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.0/extension/bmap.min.js"></script-->
+<!--script src="{% static 'web_source/js/bmap.min.js' %}"></script-->
+<!--使用ECharts GL扩展实现三维效果-->
+
+  
+<script type="text/javascript">
+	// 通过WebSocket实现管线状态动态刷新
+	/*
+	const ws = new WebSocket('wss://your-api/pipeline');
+		ws.onmessage = e => {
+		pipelineData = JSON.parse(e.data);
+		renderPipeline();
+		};
+	*/
+	var map;
+	function mapInit(){
+		// 高德默认标准图层
+		//var standlayer = new AMap.TileLayer.Satellite();
+		var standlayer = new AMap.TileLayer.RoadNet();//路网图层
+		//var standlayer = new AMap.TileLayer.Traffic();//实时交通图层
+				// 楼块图层
+		var buildinglayer =  new AMap.Buildings({
+					zooms: [12, 28],
+					zIndex: 10,
+					heightFactor: 1//1倍于默认高度，3D下有效
+				})
+		map = new AMap.Map('map-container', {
+			resizeEnable: true,
+			rotateEnable:true,
+			pitchEnable:true,
+			expandZoomRange:true,
+			buildingAnimation:true,//楼块出现是否带动画
+			layers:[standlayer, buildinglayer],
+			viewMode: '3D', // 默认使用 2D 模式，如果希望使用带有俯仰角的 3D 模式，请设置 viewMode: '3D'
+			pitch:60, // 地图俯仰角度，有效范围 0 度- 83 度
+			// 隐藏默认楼块
+			features: ['bg', 'road', 'point'],
+			mapStyle: 'amap://styles/light',
+			rotation:3,
+			zoom:18, // 初始化地图层级
+			//center: [119.536939,39.903146] // 初始化地图中心点
+			center: [119.538248,39.904487] // 初始化地图中心点
+		});
+		/*
+		//实时路况图层
+		var trafficLayer = new AMap.TileLayer.Traffic({
+			zIndex: 10
+		});
+		map.add(trafficLayer);//添加图层到地图
+		*/
+		AMap.plugin([
+			'AMap.ControlBar',
+			], function(){
+			// 添加 3D 罗盘控制
+			map.addControl(new AMap.ControlBar());
+		});
+		map.on("complete", function(){
+			console.log("地图加载完成！");  
+		});
+	}
+	// 初始化地图
+	mapInit();
+	
+	// 初始化ECharts
+	// 采用Canvas渲染模式提升性能,null,{render:'canvas'}
+	var chart = echarts.init(document.getElementById('map-container'));
+    // 坐标系转换方法
+	function convertCoords(coords) {
+		return coords.map(coord => {
+			const pixel = map.lngLatToContainer(new AMap.LngLat(coord[0], coord[1]));
+			return [pixel.getX(), pixel.getY()];
+		});
+	}
+	// 动态更新图表
+	function updateChart() {
+		const option = {
+			animation: false,
+			graphic: {
+				elements: getPipelineElements()
+			}
+		};
+		chart.setOption(option);
+	}
+	// 管道元素生成器
+	function getPipelineElements() {
+		return pipelineData.map(pipe => ({
+			type: 'polyline',
+			shape: {
+				points: convertCoords(pipe.path)
+			},
+			style: {
+				stroke: getStatusColor(pipe.status),
+				lineWidth: 4
+			},
+			onclick: () => showPipeInfo(pipe)
+		}));
+	}
+	// 实时数据示例
+	const pipelineData = [{
+		id: 'pipe-001',
+		name: '西气东输主干线',
+		path: [
+			[116.368904, 39.913423],
+			[116.382122, 39.901176],
+			[116.394673, 39.908579]
+		],
+		status: 'normal',
+		pressure: 3.2
+	}];
+
+	// 状态颜色映射
+	function getStatusColor(status) {
+		const colors = {
+			normal: '#52c41a',
+			warning: '#faad14',
+			danger: '#f5222d'
+		};
+		return colors[status] || '#1890ff';
+	}
+	// 信息展示
+	function showPipeInfo(pipe) {
+		$('#pipeInfo').html(`
+			<p class="mb-1">名称: ${pipe.name}</p>
+			<p class="mb-1">状态: <span class="badge badge-${getStatusClass(pipe.status)}">${pipe.status}</span></p>
+			<p>压力值: ${pipe.pressure}MPa</p>
+		`);
+	}
+	// Bootstrap状态类映射
+	function getStatusClass(status) {
+		return {
+			normal: 'success',
+			warning: 'warning',
+			danger: 'danger'
+		}[status] || 'secondary';
+	}
+	// 地图事件绑定
+	map.on('movestart', () => chart.clear());
+	map.on('moveend', updateChart);
+	map.on('zoomchange', updateChart);
+	// 初始化渲染
+	$(document).ready(() => {
+		updateChart();
+		setInterval(fetchRealData, 5000); // 模拟实时更新
+	});
+
+	// 模拟实时数据获取
+	function fetchRealData() {
+		pipelineData.forEach(pipe => {
+			pipe.pressure = (Math.random() * 5).toFixed(1);
+		});
+		updateChart();
+	}
+	*/
+  </script>
+{% endblock %}
+
+

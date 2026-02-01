@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load static %}
+{% block mainbody %}
+
+
+<!-- Header -->
+<header id="header">
+	<h2><strong>定位IP</strong></h2>
+</header>
+
+<!-- Content -->
+<section>
+<hr class="major" />
+
+<!-- Elements -->
+<div class="row gtr-200">
+	<div class="col-6 col-12-medium" >
+		<form method="post" action="{% url 'web_source:searchip'%}">
+			{% csrf_token %}
+				<div class="row gtr-uniform">
+					<div class="col-12 col-12-xsmall">
+						<input type="text" name="ipv4" id="ipv4" value="" placeholder="IPV4" required/>
+					</div>
+					<div class="col-12 col-12-small">
+						<input type="checkbox" id="zl" name="zl">
+						<label for="zl">标准化已有ip信息质量</label>
+					</div>
+					<div class="col-12">
+						<ul class="actions">
+							<li><input type="button" value="确认" class="primary" id="conf"/></li>
+							<li><input type="reset" value="重置" /></li>
+						</ul>
+					</div>
+				</div>
+			</form>
+	</div>
+</div>
+
+<div id="top" style="display:none; width: 100%;height: 100%;position: absolute;top:0px;z-index: 10000;background-color: rgba(200, 200, 200, 0.5);background-image: url({% static 'web_source/images/load.gif' %});">
+</div>
+</section>	
+<section>
+	<hr class="major" />	
+	<div class="col-6 col-12-small" id="result">
+	</div>	
+</section>	
+{% endblock %}
+
+{% block mainscript %}
+<script type="text/javascript">
+
+$(function(){
+	var jsonStr = '{"name": "John", "age": 30, "city": "New York"}';
+	var jsonObj = JSON.parse(jsonStr);
+	//console.log(jsonObj.name); 
+})
+var re = /^(1\d{2}|2[0-4]\d|25[0-5]|[1-9]\d|[1-9])\.(1\d{2}|2[0-4]\d|25[0-5]|[1-9]\d|\d)\.(1\d{2}|2[0-4]\d|25[0-5]|[1-9]\d|\d)\.(1\d{2}|2[0-4]\d|25[0-5]|[1-9]\d|\d)$/;
+$("#conf").click(function (){
+	var ip = $("#ipv4").val();
+	if(!re.test(ip)){
+		alert("Please enter a valid IPv4 address");
+		$("#ipv4").focusin();
+		return false;
+	}
+	var check = $("#zl").prop('checked');
+	console.log(ip, check);
+
+	$.ajax({
+		url:"{% url 'web_source:searchip'%}",  
+		type:"post",    
+		data:{"ipv4":ip, "check":check,"csrfmiddlewaretoken": '{{ csrf_token }}'},   
+		//contentType: 'application/json;charset=utf-8',
+		success: function (res){ 
+			console.log('请求成功');
+			//res_json = JSON.stringify(res.data);
+			res_json = res.data;
+			let a = "<ul class='alt'>\
+					<li>查询IP："+res_json.ipv4+"</li>\
+					<li>标准化已有ip信息质量"+res_json.check+"</li>\
+					</ul>" + "<hr style='margin:0px' />";
+			$('#result').append(a);
+			ip_special = res_json.ip_special
+			let h1 = "<h4>特别IP</h4>";
+			let h2 = "<h4>定位IP</h4>";
+			let h1_is = false;
+			let h2_is = false;
+			for(let i of ip_special){
+				h1_is = true;
+				//console.log(i)
+				var c = "<ul>\
+					<li>分类："+i.dic+"</li>\
+					<li>网络名："+i.network+"</li>\
+					<li>掩码："+i.netmask+"</li>\
+					<li>掩码："+i.netmask_int+"</li>\
+					<li>VLAN："+i.vlan+"</li>\
+					";
+				for(let d of i.buildings){
+					c = c + "<li>位置："+d+"</li>" + "</ul>" + "<hr style='margin:0px' />";
+				}	
+				h1 = h1 + c + "<li>备注："+i.remarks+"</li>";
+			}
+			if(h1_is){
+				$('#result').append(h1);
+			}
+			ip_n = res_json.ip_n
+			for(let i of ip_n){
+				h2_is = true;
+				console.log(i)
+				var c = "<ul>\
+					<li>免认证："+i.free+"</li>\
+					<li>网络名："+i.network+"</li>\
+					<li>掩码："+i.netmask+"</li>\
+					<li>掩码："+i.netmask_int+"</li>\
+					<li>VLAN："+i.vlan+"</li>";
+				for(let d of i.buildings){
+					c = c + "<li>归属："+d+"</li>" + "</ul>" + "<hr style='margin:0px'/>";
+				}	
+				h2 = h2 + c + "<li>备注："+i.remarks+"</li>" + "</ul>";
+			}
+			if(h2_is){
+				$('#result').append(h2);
+			}
+			if(!h1_is && !h2_is){
+				$('#result').append("<h2>没有查询到！！！</h2>");
+			}
+		},
+		beforeSend: function(){
+			$('#result').empty();
+			$('#top').css('display', 'block');
+			console.log('请求开始');
+		},
+		complete: function(){
+			$('#top').css('display', 'none');
+			console.log('请求完成');
+		},
+		error:function(){
+			$('#result').append("<h2>请求出错！!!</h2>");
+			alert('请求出错');
+		}
+	});
+
+})
+
+</script>
+{% endblock %}
+
+
